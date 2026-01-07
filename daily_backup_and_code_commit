@@ -10,8 +10,24 @@ DB_NAME="mydb"
 DATE=$(date +"%Y-%m-%d")
 BACKUP_FILE="$BACKUP_DIR/${DB_NAME}_$DATE.sql"
 
+GZ_FILE="$BACKUP_FILE.gz"
+ENC_FILE="$GZ_FILE.gpg"
+
+# CREATE BACKUP DIRECTORY IF NOT EXISTS
+mkdir -p "$BACKUP_DIR"
+
 # CREATE MYSQL BACKUP
 mysqldump -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_FILE"
+
+# COMPRESS BACKUP
+gzip "$BACKUP_FILE"
+
+# ENCRYPT BACKUP (symmetric encryption)
+gpg --batch --yes --passphrase "$BACKUP_PASSPHRASE" -c "$GZ_FILE"
+
+# REMOVE UNENCRYPTED FILE
+rm -f "$GZ_FILE"
+rm -f "$BACKUP_FILE"
 
 # EXIT IF BACKUP FAILED
 if [ $? -ne 0 ]; then
@@ -26,3 +42,4 @@ cd "$APP_DIR" || exit 1
 git add .
 git commit -m "Daily DB backup: $DATE"
 git push origin main
+
